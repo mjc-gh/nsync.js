@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>InSync Tests</title>
+  <link rel="stylesheet" href="vendor/qunit.css" type="text/css" media="screen" />
+  <script src="vendor/underscore-1.1.7.js"></script>
+	<script src="vendor/jquery-1.6.3.min.js"></script>
+  <script src="vendor/qunit.js"></script>
+
+  <script src="../nsync.js"></script>
+
+	<script src="pubsub.js"></script>
+	<script src="base.js"></script>
+	
+	<script>
+		function bmark(fn, times){
+			var start = (new Date()).getTime();
+			for (var x = 0; x < (times || 10000); x++) fn();
+			return (new Date()).getTime() - start;
+		}
+	</script>
+</head>
+<body>
+  <h1 id="qunit-header">InSync Tests</h1>
+  <h2 id="qunit-banner"></h2>
+  <h2 id="qunit-userAgent"></h2>
+  <ol id="qunit-tests"></ol>
+</body>
+</html>
