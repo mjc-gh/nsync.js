@@ -1,6 +1,8 @@
 nsync.js
 ========
 
+*This code is very experimental and is constantly changing.*
+
 nsync.js is a data synchronization wrapper for Javascript. It very loosely ties data to "views" (functions). It was created for and used by [BreakBase](http://breakbase.com). 
 
 The idea is that you have some data that is constantly changing and being updated, usually by some "real-time" feed. Using nsync, it is possible to subscribe to these changes via "view" functions.
