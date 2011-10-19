@@ -23,7 +23,7 @@
 				collect_changes(full[i], subset[i], (changes[i] = {}));
 				
 			} else {
-				changes[i] = !!subset[i];
+				changes[i] = subset[i] !== undefined;
 			}
 		}
 	}
