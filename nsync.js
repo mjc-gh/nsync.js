@@ -3,27 +3,33 @@
 	nsync = this.nsync = function(obj){
 		this.data = deep_copy({}, obj);
 	};
+
+	var indexOf = Array.prototype.indexOf || function(obj){
+		for (var i = 0; i < this.length; i++){
+			if (this[i] === obj)
+				return i;
+		}
+
+		return -1;
+	};
 	
 	function isObject(obj){
 		return !!obj && obj.constructor === Object;
 	}
 	
-	function collect_paths(obj, prev){
-		var paths = [];
-		for (var i in obj){
-			var path = prev ? prev + '.' + i : i;
-			paths.push(path);
-
-			if (isObject(obj[i])) {
-				paths = paths.concat(collect_paths(obj[i], path));
+	function collect_changes(full, subset, changes){
+		for (var i in full){
+			if (isObject(subset[i])){
+				collect_changes(full[i], subset[i], (changes[i] = {}));
+				
+			} else {
+				changes[i] = !!subset[i];
 			}
 		}
-		
-		return paths;
 	}
 
 	// we need a "deep merge\copy" (only supports "JSON values")
-	function deep_copy(dst, src){
+	function deep_copy(dst, src, changes){
 		for (var i in src){
 			if (src[i] && typeof src[i] == 'object') { 
 				// dst[i] is null\array or not same type as src
@@ -40,59 +46,44 @@
 		
 		return dst;
 	}
-	
-	var indexOf = Array.prototype.indexOf || function(obj){
-		for (var i = 0; i < this.length; i++){
-			if (this[i] === obj) 
-				return i;
-		}
 
-		return -1;
-	};
-	
 	// we can just use deep_copy to extend the prototype. the function is overkill
 	// but it works fine and is only used once
-	deep_copy(nsync.prototype, {
-		
-		// Publish for a given path. If not path is supplied, the root path
-		// is used
-		publish:function(path){
-			if (!this._paths) return;
+	deep_copy(nsync.prototype, {		
+		// Publish for a given update set; defaults to what is in this.data
+		publish:function(changes){
+			var query_paths = this._paths;
+			if (!query_paths) return;
 			
-			path = path || '.';
-			var list = this._paths[path];
+			// if no changes, use data directly
+			var data = changes || this.data;
 			
-			if (list){
-				for (var i = 0; i < list.length; i++){
-					list[i].call(this, path);
+			for (var query in query_paths){
+				var test = new Function('try{with(this){return '+ query +'; }}catch(e){return !1;}');
+				
+				if (test.call(data)){
+					var fn_list = query_paths[query];
+					for (var i = 0; i < fn_list.length; i++)
+						fn_list[i].call(this);
 				}
 			}
 		},
 		
-		// Subscribe function to supplied path. The function is also added to the 
-		// root path, '.'. The root path is used to track all unique subscriber function
-		subscribe:function(path_or_fn, func){
-			var paths = this._paths || (this._paths = {});
-			var split = func ? path_or_fn.split(/\s+/).concat(['.']) : ['.'];
+		// Subscribe function with a supplied query
+		subscribe:function(query, func){
+			var query_map = this._paths || (this._paths = {});
 			
-			for (var i = 0; i < split.length; i++){
-				var list = paths[split[i]] || (paths[split[i]] = []);
-				if (indexOf.call(list, func) < 0){
-					list.push(func || path_or_fn);
-				}
+			var list = query_map[query] || (query_map[query] = []);
+			if (indexOf.call(list, func) < 0){
+				list.push(func);
 			}
 		},
 		
-		// Remove function from list of subscribers. Just like subscribe will add the function
-		// to the root path, unsubscribe will remove it.
-		unsubscribe:function(path, func){
-			if (!this._paths)
-				return;
-
-			if (!func)
-				return this.unsubscribe('.', path);
-
-			var list = this._paths[path];
+		// Remove function from list of subscribers for the given query.
+		unsubscribe:function(query, func){
+			var list = this._paths[query];
+			if (!list) return;
+			
 			for (var i = 0; i < list.length;){
 				if (func === list[i]){
 					list.splice(i, 1);
@@ -107,22 +98,15 @@
 		// Merge in new data; publish changes unless this update is silent
 		update: function(obj, silent){
 			this.previous = deep_copy({}, this.data);
-			this.changed = collect_paths(obj);
-
 			deep_copy(this.data, obj);
 			
-			if (silent) return;
+			var changes = this.changes = {};
+			collect_changes(this.data, obj, changes);
 			
-			for (var i = 0; i < this.changed.length; i++){
-				this.publish(this.changed[i]);
+			if (!silent) {
+				this.publish(changes);
 			}
-		},
-		
-		// alias to publish 'root' path; calls all unique subscriber functions
-		refresh: function(){
-			this.publish();
 		}
 	});
 })();
-
 

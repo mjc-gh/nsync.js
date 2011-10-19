@@ -2,15 +2,6 @@ test('PubSub#subscribe', function(){
 	var fn = function(){};
 	var gn = function(){};
 	var psub = new nsync({ a: 1});
-	psub.subscribe(fn);
-
-	ok(psub._paths);
-	ok(psub._paths['.']);
-	equal(psub._paths['.'].length, 1);
-
-	psub.subscribe(fn);
-	equal(psub._paths['.'].length, 2);
-	
 	psub.subscribe('a', fn);
 	psub.subscribe('a.b', fn);
 	
@@ -20,9 +11,11 @@ test('PubSub#subscribe', function(){
 	ok(psub._paths['a.b']);
 	equal(psub._paths['a.b'].length, 1);
 	
-	psub.subscribe('a a.b', gn);
-	equal(psub._paths['a'].length, 2);
-	equal(psub._paths['a.b'].length, 2);
+	psub.subscribe('a || a.b', gn);
+	equal(psub._paths['a || a.b'].length, 1);
+	
+	psub.subscribe('a && a.b', gn);
+	equal(psub._paths['a && a.b'].length, 1);
 });
 
 test('PubSub#unsubscribe', function(){
@@ -30,21 +23,12 @@ test('PubSub#unsubscribe', function(){
  	var gn = function(){};
 	var psub = new nsync();
 
-	psub.subscribe(fn); // refresh only
 	psub.subscribe('a', fn);
 	psub.subscribe('a', fn);
 	psub.subscribe('a', gn);
 	psub.subscribe('a.b', fn);
 	psub.subscribe('a.b', gn);
 	psub.subscribe('a.b', function(){});
-
-	equal(psub._paths['.'].length, 3);
-	equal(psub._paths['a'].length, 2);
-	equal(psub._paths['a.b'].length, 3);
-	
-	psub.unsubscribe(fn);
-	
-	equal(psub._paths['.'].length, 2);
 
 	psub.unsubscribe('a', fn);
 	equal(psub._paths['a'].length, 1);
@@ -60,23 +44,51 @@ test('PubSub#unsubscribe', function(){
 });
 
 test('PubSub#publish', function(){
-	var psub = new nsync();
-	var fn = function(){ equal(this, psub); };
-	var gn = function(){ equal(this, psub); };
+	var psub, fn = function(){ equal(this, psub); };
 	
-	expect(6);
+	expect(10);
 
-	psub.subscribe(fn);
-	psub.subscribe('a b.c', fn);
+	psub = new nsync({a: 1});
+	psub.subscribe('a', fn);
+	psub.subscribe('b.c', fn);
+	psub.subscribe('x || y', fn);
+	psub.publish(); // expect 1
 	
-	psub.subscribe('a', gn);
-	psub.subscribe('b.c', gn);
-	
-	psub.subscribe('x y', fn);
-	psub.subscribe('y z', gn);
+	psub = new nsync({a:1, b:{ c:1 }});
+	psub.subscribe('a', fn);
+	psub.subscribe('b.c', fn);
+	psub.subscribe('x || y', fn);
+	psub.publish(); // expect 2
 
-	psub.publish('a');
-	psub.publish('b.c');
-	psub.publish('y');
+	psub = new nsync({a:1, b:{ c:1 }});
+	psub.subscribe('a || b.c', fn);
+	psub.publish(); // expect 1
+
+	psub = new nsync({a:1});
+	psub.subscribe('a || b.c', fn);
+	psub.subscribe('a || x.y.z', fn);
+	psub.publish(); // expect 2
 	
+	psub = new nsync({a:1, b:{ c:1 }});
+	psub.subscribe('a && b.c', fn);
+	psub.publish(); // expect 1
+	
+	psub = new nsync({a:1});
+	psub.subscribe('a && b.c', fn);
+	psub.publish(); // expect 0
+	
+	psub = new nsync({a:1, b:{ c:1 }});
+	psub.subscribe('a && b.c || x.y.z', fn);
+	psub.subscribe('a && b.c && x.y.z', fn);
+	psub.publish(); // expect 1
+	
+	psub = new nsync({a:1, b:{ c:1 }, d:{ e: { f:1 } } });
+	psub.subscribe('a && b.c && d.e.f', fn);
+	psub.subscribe('a && b && d.e', fn);
+	psub.subscribe('x || a', fn);
+	psub.publish(); // expect 2
+	
+	psub = new nsync({ a:1 });
+	psub.subscribe('x || a > 0', fn);
+	psub.publish(); // expect 0 (x is undefined)
 });

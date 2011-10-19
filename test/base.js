@@ -39,44 +39,19 @@ test('Base manipulation', function(){
 	notStrictEqual(obj.d.e[1], src.d.e[1]);
 });
 
-test('Base#replace', function(){
-	var fn = function(){ equal(this, base); };
-	var base = new nsync(test_obj);
-	var obj = { a:2, b:{ c:[1] } };
-	
-	expect(8);
-	
-	// base.subscribe(fn);
-	// base.subscribe('a', fn);
-	// base.subscribe('b.c', fn);
-	// base.subscribe('d.e', fn);
-	base.replace(obj);
-	
-	deepEqual(base.data, obj);
-	deepEqual(base.data.a, obj.a);
-	deepEqual(base.data.b, obj.b);
-	strictEqual(base.data.d, undefined);
-
-	deepEqual(base.previous, test_obj)
-	strictEqual(base.changed, true);
-
-	notStrictEqual(base.data, base.previous);
-	notStrictEqual(base.data.b.c, base.previous.b.c);
-});
-
 test('Base#update', function(){
 	var fn = function(path){ equal(this, base); };
 	var base = new nsync(test_obj);
 	var obj = { a:2, b:{ x:[] }, m:{ n: { q: 1 } } };
 
-	expect(18);
+	expect(21);
 
-	base.subscribe(fn);
-	base.subscribe('a', fn);
-	base.subscribe('b', fn);
-	base.subscribe('b.c', fn); // should not run
-	base.subscribe('d.e', fn); // should not run
-	base.update(obj);
+	base.subscribe('a', fn); // expect 1
+	base.subscribe('b', fn); // expect 1
+	base.subscribe('m.n.q && a && b.x', fn); // expect 1
+	base.subscribe('b.c', fn); // expect 0
+	base.subscribe('d.e || b.c', fn); // expect 0
+	base.update(obj);	
 	
 	ok(base.data.m.n.q);
 	notStrictEqual(base.data.m, obj.m);
@@ -94,35 +69,41 @@ test('Base#update', function(){
 	notStrictEqual(base.data, base.previous);
 	notStrictEqual(base.data.d.e, base.previous.d.e);
 	
-	deepEqual(base.changed, ['a', 'b', 'b.x', 'm', 'm.n', 'm.n.q']);
+	deepEqual(base.changes, { a:true, b:{ c:false, x:true }, d:false, m:{ n:{ q:true } } });
 	
 	var more = { y:{ z:1 } };
-	base.subscribe('y.z', fn);
+	base.subscribe('y.z', fn); // expect 1
 	base.update(more);
 	
 	equal(base.data.y.z, more.y.z);
 	notStrictEqual(base.data.y, more.y);
-	deepEqual(base.changed, ['y', 'y.z']);
+	
+	equal(base.changes.a, false);
+	ok(base.changes.y);
+	ok(base.changes.y.z);
 });
 
-test('Base#refresh', function(){
-	var fn = function(path){ equal(this, base); };
-	var gn = function(path){ equal(this, base); };
+test('Base#update silently', function(){
+	var fn = function(){ equal(this, base); };
 	var base = new nsync(test_obj);
-
-	expect(4);
-
-	base.subscribe(fn);
-	base.subscribe(gn);
-	base.refresh(); // 2 run
+	var obj = { a:2, b:{ c:[1] } };
 	
-	base = new nsync(test_obj);
- 
-	base.subscribe(fn);
-	base.subscribe(gn);
-	base.subscribe('a.b', fn);
-	base.subscribe('x.y q.n', gn);
-	base.refresh(); // 3 run
+	expect(6);
+	
+	// none of these should fire
+	base.subscribe('a', fn);
+	base.subscribe('b.c', fn);
+	base.subscribe('d.e', fn);
+	base.update(obj, true);
+	
+	deepEqual(base.data.a, obj.a);
+	deepEqual(base.data.b, obj.b);
+
+	deepEqual(base.previous, test_obj)
+	deepEqual(base.changes, { a:true, b:{ c:true }, d:false });
+
+	notStrictEqual(base.data, base.previous);
+	notStrictEqual(base.data.b.c, base.previous.b.c);
 });
 
 test('Base#update with different types', function(){

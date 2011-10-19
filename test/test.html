@@ -10,15 +10,7 @@
   <script src="../nsync.js"></script>
 
 	<script src="pubsub.js"></script>
-	<script src="base.js"></script>
-	
-	<script>
-		function bmark(fn, times){
-			var start = (new Date()).getTime();
-			for (var x = 0; x < (times || 10000); x++) fn();
-			return (new Date()).getTime() - start;
-		}
-	</script>
+	<script src="base.js"></script>	
 </head>
 <body>
   <h1 id="qunit-header">InSync Tests</h1>
