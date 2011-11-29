@@ -35,16 +35,15 @@
 		return dst;
 	}	
 		
-	this.PubSub = nsync.prototype = {
-		publish: function(type, ctx){
+	var pubsub = this.PubSub = {
+		publish: function(type, args, ctx){
 			var handlers = this.handlers || (this.handlers = {});
 			var list = handlers[type];
 			
 			if (!list) return;
 			
-			var args = Array.prototype.slice.call(arguments, 2);
 			for (var i = 0; i < list.length; i++)
-				list[i].apply(ctx || this, args);
+				list[i].apply(ctx || this, args || []);
 			
 			return this;
 		},
@@ -54,7 +53,7 @@
 			
 			if (!func){
 				for (var i in type)
-					this.on(i, type[i]);
+					this.subscribe(i, type[i]);
 				
 			} else {
 				var list = handlers[type] || (handlers[type] = []);
@@ -88,7 +87,10 @@
 
 	// we can just use deep_copy to extend the prototype. the function is overkill
 	// but it works fine and is only used once
-	deep_copy(nsync.prototype, {
+	var prototype = nsync.prototype;
+	
+	deep_copy(prototype, pubsub);
+	deep_copy(prototype, {
 		// Publish for a given update set; defaults to what is in this.data
 		changed:function(path){
 			var test = new Function('try{with(this){return '+ path +'; }}catch(e){return !1;}');

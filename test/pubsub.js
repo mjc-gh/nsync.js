@@ -21,7 +21,14 @@ test('subscribe method', function(){
 
 	ok(psub.handlers['abc']);
 	equal(psub.handlers['abc'].length, 2);
-
+	
+	psub.subscribe({
+		abc: function(){},
+		xyz: function(){}
+	});
+	
+	equal(psub.handlers['abc'].length, 3);
+	equal(psub.handlers['xyz'].length, 2);
 });
 
 test('unsubscribe method', function(){
@@ -50,10 +57,13 @@ test('unsubscribe method', function(){
 });
 
 test('publish method', function(){
-	var psub = new nsync();
-	var fn = function(){ equal(this, psub); };
+	var psub = new nsync(), ctx = {};
 	
-	expect(2);
+	var fn = function(){ equal(this, psub); };
+	var gn = function(){ deepEqual(arguments, [1,2,3]); };
+	var hn = function(){ equal(this, ctx); };
+	
+	expect(5);
 
 	psub.subscribe('abc', fn);
 	psub.subscribe('xyz', fn);
@@ -61,4 +71,10 @@ test('publish method', function(){
 
 	psub.publish('abc');
 	psub.publish('xyz');
+	
+	psub.publish('abc', [1,2,3]);
+	psub.publish('xyz', [1,2,3]);
+	
+	psub.subscribe('ctx', hn);
+	psub.publish('ctx', [], ctx);
 });
