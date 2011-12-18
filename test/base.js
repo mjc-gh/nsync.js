@@ -68,6 +68,16 @@ test('update method', function(){
 	notStrictEqual(base.data.b, base.previous.b);
 });
 
+test('silent update', function(){
+	var base = new nsync(test_obj);
+
+	expect(1);
+
+	base.subscribe('update', function(){ ok(true); });
+	base.update({ a:1 }, true);
+	base.update({ a:1 });
+});
+
 test('changed method', function(){
 	var base = new nsync(test_obj);
 	var obj = { a:2, b:{ x:[] }, m:{ n: { q: 1 } } };

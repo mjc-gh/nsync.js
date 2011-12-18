@@ -63,7 +63,7 @@ test('publish method', function(){
 	var gn = function(){ deepEqual(arguments, [1,2,3]); };
 	var hn = function(){ equal(this, ctx); };
 	
-	expect(5);
+	expect(4);
 
 	psub.subscribe('abc', fn);
 	psub.subscribe('xyz', fn);
@@ -75,6 +75,6 @@ test('publish method', function(){
 	psub.publish('abc', [1,2,3]);
 	psub.publish('xyz', [1,2,3]);
 	
-	psub.subscribe('ctx', hn);
-	psub.publish('ctx', [], ctx);
+	// psub.subscribe('ctx', hn);
+	// psub.publish('ctx', [], ctx);
 });

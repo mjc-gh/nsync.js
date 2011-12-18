@@ -1,5 +1,7 @@
 (function(){
-	this.nsync = function nsync(obj){
+	// nsync model constructor; initializes data
+	//this.nsync = function nsync(obj){
+	var nsync = this.nsync = function(obj){
 		this.data = deep_copy({}, obj);
 	};
 
@@ -16,34 +18,17 @@
 		return !!obj && obj.constructor === Object;
 	}
 	
-	// we need a "deep merge\copy" (only supports "JSON values")
-	function deep_copy(dst, src, changes){
-		for (var i in src){
-			if (src[i] && typeof src[i] == 'object') { 
-				// dst[i] is null\array or not same type as src
-				if (!isObject(dst[i]) || dst[i].constructor !== src[i].constructor)
-				 	delete dst[i];
-				
-				deep_copy(dst[i] || (dst[i] = isObject(src[i]) ? {} : []), src[i]);
-				
-			} else {
-				dst[i] = src[i];
-				
-			}
-		}
-		
-		return dst;
-	}	
-		
-	var pubsub = this.PubSub = {
-		publish: function(type, args, ctx){
+	// nsync also consists of a PubSub system that objects can 
+	this.PubSub = {
+		publish: function(type){
 			var handlers = this.handlers || (this.handlers = {});
 			var list = handlers[type];
 			
 			if (!list) return;
 			
+			var args = Array.prototype.slice.call(arguments, 1);
 			for (var i = 0; i < list.length; i++)
-				list[i].apply(ctx || this, args || []);
+				list[i].apply(this, args);
 			
 			return this;
 		},
@@ -84,14 +69,31 @@
 			return this;
 		}
 	};
-
+	
+	// we need a "deep merge\copy" (only supports "JSON values")
+	function deep_copy(dst, src, changes){
+		for (var i in src){
+			if (src[i] && typeof src[i] == 'object') { 
+				// dst[i] is null\array or not same type as src
+				if (!isObject(dst[i]) || dst[i].constructor !== src[i].constructor)
+				 	delete dst[i];
+				
+				deep_copy(dst[i] || (dst[i] = isObject(src[i]) ? {} : []), src[i]);
+				
+			} else {
+				dst[i] = src[i];
+				
+			}
+		}
+		
+		return dst;
+	}	
+	
 	// we can just use deep_copy to extend the prototype. the function is overkill
 	// but it works fine and is only used once
-	var prototype = nsync.prototype;
-	
-	deep_copy(prototype, pubsub);
-	deep_copy(prototype, {
-		// Publish for a given update set; defaults to what is in this.data
+	deep_copy(nsync.prototype, this.PubSub);
+	deep_copy(nsync.prototype, {
+		// Helper method to determine what changed. Supports deep object access via strings
 		changed:function(path){
 			var test = new Function('try{with(this){return '+ path +'; }}catch(e){return !1;}');
 			
@@ -99,13 +101,14 @@
 		},
 		
 		// Merge in new data; publish changes unless this update is silent
-		update: function(obj){
+		update: function(obj, silent){
 			this.changes = deep_copy({}, obj);
 			this.previous = deep_copy({}, this.data);
 			
 			deep_copy(this.data, obj);
 			
-			this.publish('update');			
+			if (!silent)
+				this.publish('update');
 		}
 	});
 })();
