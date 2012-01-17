@@ -1,6 +1,5 @@
 (function(){
 	// nsync model constructor; initializes data
-	//this.nsync = function nsync(obj){
 	var nsync = this.nsync = function(obj){
 		this.data = deep_copy({}, obj);
 	};
@@ -95,9 +94,12 @@
 	deep_copy(nsync.prototype, {
 		// Helper method to determine what changed. Supports deep object access via strings
 		changed:function(path){
-			var test = new Function('try{with(this){return '+ path +'; }}catch(e){return !1;}');
+			if (this.changes == null)
+				return false;
 			
-			return !!test.call(this.changes)
+			var test = new Function('try{with(this){return '+ path +'!==undefined; }}catch(e){return !1;}');
+			
+			return test.call(this.changes)
 		},
 		
 		// Merge in new data; publish changes unless this update is silent
