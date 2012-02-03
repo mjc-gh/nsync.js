@@ -97,9 +97,13 @@
 			if (this.changes == null)
 				return false;
 			
-			var test = new Function('try{with(this){return '+ path +'!==undefined; }}catch(e){return !1;}');
+			var test = new Function('try{return this.'+ path +'!==undefined; }catch(e){return !1;}');
 			
 			return test.call(this.changes)
+		},
+		
+		has_changed:function(){
+			return this.changes != null;
 		},
 		
 		// Merge in new data; publish changes unless this update is silent
